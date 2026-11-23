@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /config/
+Disallow: /includes/
+Disallow: /vendor/
+Disallow: /database/
+Disallow: /uploads/admissions/
+Disallow: /uploads/rentals/
+Disallow: /uploads/invoices/
+Disallow: /admissions/suivi-dossier.php
+Disallow: /location-espaces/suivi.php
+
+Sitemap: https://ecolerubanvert.com/sitemap.xml
