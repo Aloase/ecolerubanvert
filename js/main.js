@@ -29,8 +29,6 @@
     splashOnce: true,        // true = une seule fois par visite (pas au changement de page ni au retour) ; false = à chaque chargement
     splashWord: 'Ruban Vert',// mot écrit sous le logo
     splashSeconds: 4.8,      // durée du splash
-    decor: false,            // formes + sections découpées (true pour les remettre)
-    tilt: false,             // inclinaison 3D des cartes au survol (true pour la remettre)
     assets: 'assets/images/' // dossier des images, depuis la racine du site
   };
 
@@ -56,7 +54,13 @@
     sp.innerHTML = '<img class="splash-logo" src="' + LOGO + '" alt="École Ruban Vert">' +
       '<div class="splash-word" aria-label="' + CONFIG.splashWord + '">' + CONFIG.splashWord.split('').map(function (c, i) {
         return '<span' + (c === ' ' ? ' class="sp"' : '') + ' style="--m:' + i + '" aria-hidden="true">' + (c === ' ' ? '&nbsp;' : c) + '</span>';
-      }).join('') + '</div>';
+      }).join('') + '</div>' +
+      // Le ruban vert : il se dessine sous le mot à la fin de l'animation
+      '<svg class="splash-ribbon" viewBox="0 0 640 90" aria-hidden="true">' +
+        '<path pathLength="1" class="rb-shadow" d="M12 58 C 92 6, 168 100, 248 54 S 408 6, 488 54 S 590 92, 628 38"/>' +
+        '<path pathLength="1" class="rb-main" d="M12 52 C 92 0, 168 94, 248 48 S 408 0, 488 48 S 590 86, 628 32"/>' +
+        '<path pathLength="1" class="rb-light" d="M12 46 C 92 -6, 168 88, 248 42 S 408 -6, 488 42 S 590 80, 628 26"/>' +
+      '</svg>';
     body.appendChild(sp);
     body.classList.add('splash-open');
     setTimeout(function () {
@@ -132,30 +136,26 @@
     backdrop.addEventListener('click', function () { setNav(false); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setNav(false); });
 
-    // Sous-menus
-    //  · souris : le SURVOL déplie (géré en CSS, le clic sur le lien ouvre la page)
-    //  · écran tactile : un clic déplie (le lien de la page est gardé dans « Overview »)
-    var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    if (!canHover) {
-      $$('.nav-item, .dropdown-item', nav).forEach(function (item) {
-        var link = $(':scope > .nav-link, :scope > .dropdown-link', item);
-        var sub = $(':scope > .dropdown, :scope > .sub-dropdown', item);
-        if (!link || !sub) return;
-        link.setAttribute('data-toggler', '1');
-        var href = link.getAttribute('href');
-        if (href && href !== '#') {
-          var li = document.createElement('li');
-          li.className = 'dropdown-item';
-          li.innerHTML = '<a class="dropdown-link dropdown-overview" href="' + href + '">Overview →</a>';
-          sub.insertBefore(li, sub.firstChild);
-        }
-        link.addEventListener('click', function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          item.classList.toggle('open');   // déplier ne ferme PAS le menu
-        });
+    // Sous-menus : un clic sur un élément qui en contient un le déplie (accordéon vertical)
+    $$('.nav-item, .dropdown-item', nav).forEach(function (item) {
+      var link = $(':scope > .nav-link, :scope > .dropdown-link', item);
+      var sub = $(':scope > .dropdown, :scope > .sub-dropdown', item);
+      if (!link || !sub) return;
+      link.setAttribute('data-toggler', '1');
+      // Le lien parent ne mène plus nulle part quand il déplie : on garde la page via « Overview »
+      var href = link.getAttribute('href');
+      if (href && href !== '#') {
+        var li = document.createElement('li');
+        li.className = 'dropdown-item';
+        li.innerHTML = '<a class="dropdown-link dropdown-overview" href="' + href + '">Overview →</a>';
+        sub.insertBefore(li, sub.firstChild);
+      }
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        item.classList.toggle('open');   // déplier ne ferme PAS le menu
       });
-    }
+    });
     // Seuls les vrais liens de page referment le panneau
     $$('a[href]:not([href="#"]):not([data-toggler])', nav).forEach(function (a) {
       a.addEventListener('click', function () { setNav(false); });
@@ -229,14 +229,6 @@
       ic.style.backgroundImage = 'url(' + IMG + (QL[key] || 'classroom-kids-writing.jpg') + ')';
     });
 
-    // « À propos » : la photo devient le fond de la section, le texte reste court
-    var about = $('.section.bg-white');
-    var aboutImg = about ? $('.about-image-grid > img', about) : null;
-    if (about && aboutImg) {
-      about.classList.add('img-section');
-      about.style.backgroundImage = 'url(' + aboutImg.getAttribute('src') + ')';
-    }
-
     // Photos en arrière-plan de sections (sous un voile vert pour garder le texte lisible)
     var BG = { '.stats-section': 'gymnase-vide-1.jpg', '.testimonials': 'auditorium.jpg' };
     Object.keys(BG).forEach(function (sel) {
@@ -260,69 +252,92 @@
   })();
 
   /* ============================================================
-     05. HERO : diaporama des 3 images
+     05. HERO — MBOLO, Bienvenue, Welcome, Bienvenido, arabe
+     Modifier la liste ci-dessous pour changer ou ajouter des mots.
      ============================================================ */
   (function () {
-    var slides = $$('.hero-slide');
-    if (slides.length < 2) return;
-    var si = 0;
-    slides.forEach(function (s, k) { s.classList.toggle('active', k === 0); });
-    setInterval(function () {
-      slides[si].classList.remove('active');
-      si = (si + 1) % slides.length;
-      slides[si].classList.add('active');
-    }, 4000);   // durée de chaque image (ms)
-  })();
+    var content = $('.hero-content');
+    if (!content) return;
 
-  /* ============================================================
-     05a. SECTION « BIENVENUE » : les messages défilent à la verticale
-     Insérée juste après les liens rapides. Modifier la liste pour changer ou ajouter des mots.
-     ============================================================ */
-  (function () {
     var WORDS = [
-      { t: 'MBOLO' },
-      { t: 'Bienvenue' },
-      { t: 'Welcome' },
-      { t: 'Bienvenido' },
-      { t: '欢迎光临', lang: 'zh' },
-      { t: 'أهلاً وسهلاً', lang: 'ar', dir: 'rtl' }
+      { t: 'MBOLO',      c: '#ffd600' },                         // jaune
+      { t: 'Bienvenue',  c: '#ee7917' },                         // orange
+      { t: 'Welcome',    c: '#17a3dd' },                         // bleu
+      { t: 'Bienvenido', c: '#ffffff' },                         // blanc
+      { t: 'أهلاً وسهلاً', c: '#ffd600', lang: 'ar', dir: 'rtl' },  // arabe
+      { t: '欢迎光临', c: '#17a3dd', lang: 'zh' },              // mandarin
     ];
-    // Placée plus bas : juste avant les actualités (sinon après les programmes)
-    var before = $('.news-section') || $('.learning-story');
-    var anchor = before ? null : ($('.programme-journey') || $('.quick-links') || $('.hero'));
-    if (!before && !anchor) return;
+    var TYPE = 130;     // vitesse d'écriture (ms par lettre)
+    var ERASE = 55;     // vitesse d'effacement (ms par lettre)
+    var HOLD = 1500;    // pause quand le mot est écrit (ms)
 
-    var sec = document.createElement('section');
-    sec.className = 'greet';
-    // Carrousel : une colonne par mot, tout glisse d'un cran vers la gauche toutes les 2 s
-    function col(w) {
-      return '<div class="greet-col"><span class="greet-word"' + (w.lang ? ' lang="' + w.lang + '"' : '') + '>' + w.t + '</span></div>';
-    }
-    var cols = WORDS.concat(WORDS[0]).map(col).join('');   // 6 colonnes visibles + 1 qui arrive
-    sec.innerHTML = '<div class="greet-top container">' +
-      '<p class="greet-title">Wherever you’re from,<br>you’re welcome at <strong>ERV.</strong></p>' +
-      '<a class="btn-cta greet-btn" href="admissions/apply.php">Apply now</a></div>' +
-      '<div class="greet-cols" role="img" aria-label="MBOLO, Bienvenue, Welcome, Bienvenido, 欢迎光临, أهلاً وسهلاً"><div class="greet-track">' + cols + '</div></div>';
-    if (before) before.parentNode.insertBefore(sec, before);
-    else anchor.parentNode.insertBefore(sec, anchor.nextSibling);
+    var box = document.createElement('div');
+    box.className = 'hero-greet';
+    box.setAttribute('role', 'text');
+    box.setAttribute('aria-label', 'MBOLO, Bienvenue, Welcome, Bienvenido, أهلاً وسهلاً');
+    var line = document.createElement('span');
+    line.className = 'line';
+    line.setAttribute('aria-hidden', 'true');
+    var txt = document.createElement('span');
+    var caret = document.createElement('i');
+    caret.className = 'caret';
+    line.appendChild(txt); line.appendChild(caret);
+    box.appendChild(line);
+    content.insertBefore(box, content.firstChild);
 
-    // Boucle du carrousel
-    var track = $('.greet-track', sec), k = WORDS.length + 1;
-    var DELAY = 2000;   // temps entre deux déplacements (ms)
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    // Le badge « IB World School » passe au-dessus des mots
+    var badge = $('.hero-badge', content);
+    if (badge) content.insertBefore(badge, box);
+
+    // Diaporama du fond : 3 images, 1,5 s chacune, en boucle
+    var slides = $$('.hero-slide');
+    if (slides.length > 1) {
+      var si = 0;
+      slides.forEach(function (s, k) { s.classList.toggle('active', k === 0); });
       setInterval(function () {
-        var step = track.firstElementChild.getBoundingClientRect().width;
-        track.style.transition = 'transform .7s ease';
-        track.style.transform = 'translateX(' + (-step) + 'px)';
-        setTimeout(function () {
-          track.style.transition = 'none';
-          track.style.transform = 'none';
-          track.removeChild(track.firstElementChild);
-          track.insertAdjacentHTML('beforeend', col(WORDS[k % WORDS.length]));
-          k++;
-        }, 720);
-      }, DELAY);
+        slides[si].classList.remove('active');
+        si = (si + 1) % slides.length;
+        slides[si].classList.add('active');
+      }, 4000);
     }
+
+    function show(w) {
+      line.style.setProperty('--c', w.c);
+      line.className = 'line' + (w.lang === 'ar' ? ' ar' : '');
+      if (w.lang) { line.lang = w.lang; line.dir = w.dir; } else { line.removeAttribute('lang'); line.dir = 'ltr'; }
+    }
+
+    // Mouvement réduit : on change de mot sans écrire lettre par lettre
+    if (reduce) {
+      var k = 0;
+      show(WORDS[0]); txt.textContent = WORDS[0].t;
+      setInterval(function () { k = (k + 1) % WORDS.length; show(WORDS[k]); txt.textContent = WORDS[k].t; }, 2400);
+      return;
+    }
+
+    var wi = 0, ci = 0, erasing = false;
+    show(WORDS[0]);
+    // L'écriture démarre quand le splash se retire
+    var startAt = (splashShown ? CONFIG.splashSeconds * 1000 + 400 : 0);
+    setTimeout(function step() {
+      var w = WORDS[wi], chars = Array.from(w.t);   // Array.from : respecte les lettres arabes
+      var delay;
+      if (!erasing) {
+        ci++;
+        txt.textContent = chars.slice(0, ci).join('');
+        if (ci >= chars.length) { erasing = true; delay = HOLD; } else delay = TYPE;
+      } else {
+        ci--;
+        txt.textContent = chars.slice(0, Math.max(ci, 0)).join('');
+        if (ci <= 0) {
+          erasing = false; ci = 0;
+          wi = (wi + 1) % WORDS.length;
+          show(WORDS[wi]);
+          delay = 350;
+        } else delay = ERASE;
+      }
+      setTimeout(step, delay);
+    }, startAt);
   })();
 
   /* ============================================================
@@ -380,7 +395,7 @@
      05c. CARTES : elles réagissent à la souris (inclinaison 3D + reflet qui suit le curseur)
      ============================================================ */
   (function () {
-    if (!CONFIG.tilt || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     var sel = '.quick-link-card, .mvv-card, .programme-scroll-card, .testimonial-card, .news-card, .stat-item, ' +
               '.sidebar-card, .team-card, .program-card, .contact-form, .contact-grid > div:first-child';
     $$(sel).forEach(function (el) {
@@ -403,30 +418,11 @@
   })();
 
   /* ============================================================
-     05d. FONDU : le contenu d'une section apparaît quand on y entre et s'efface quand on la quitte
-     ============================================================ */
-  (function () {
-    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    var SECTIONS = '.quick-links, .trust-strip, main .section, .programme-journey, .learning-story, .mvv-section, .stats-section, .testimonials, .news-section, .contact-section, .greet';
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (en) {
-        en.target.classList.toggle('fx-in', en.isIntersecting);   // entre = visible, sort = invisible
-      });
-    }, { threshold: 0, rootMargin: '-12% 0px -12% 0px' });
-    $$(SECTIONS).forEach(function (sec) {
-      if (sec.closest('.hero')) return;
-      sec.classList.add('fx');
-      io.observe(sec);
-    });
-  })();
-
-  /* ============================================================
      06. FORMES QUI SE CONSTRUISENT AU SCROLL + SECTIONS DÉCOUPÉES
      Chaque section reçoit un bord haut non rectangulaire (trapèze, pointe, biais…)
      et un jeu de triangles / trapèzes / losanges qui viennent se placer en défilant.
      ============================================================ */
   (function () {
-    if (!CONFIG.decor) return;   // version épurée : ni formes ni découpes
     var small = window.innerWidth <= 768;
 
     // 06.1 Bords découpés (le bord haut change d'une section à l'autre)
